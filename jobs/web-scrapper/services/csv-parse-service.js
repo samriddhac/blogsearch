@@ -23,7 +23,7 @@ module.exports = {
 					let data = dataList[i];
 					if(data.execute==='Y') {
 						scrapeService.scrapeSite(data.blog_index, data.blog_url, data.exclusion_pattern, pageIndexTextItems,
-							data.interval_min, data.interval_max, ()=>{
+							data.interval_min, data.interval_max, outputPath, ()=>{
 				    	console.log('Job completed with Blog index: %s Blog url: %s', data.blog_index, data.blog_url);
 				    	console.log('pageIndexTextItems size ', pageIndexTextItems.length);
 						if(pageIndexTextItems!==undefined && pageIndexTextItems!==null && pageIndexTextItems.length>0) {

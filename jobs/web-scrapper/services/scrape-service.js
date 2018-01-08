@@ -1,11 +1,13 @@
 const cheerio = require("cheerio");
 const request = require("tinyreq");
 const _ = require('lodash');
+const uuidv5 = require('uuid/v5');
+const webshot = require('webshot');
 
 var numRequest = 0;
 
 module.exports = {
-	scrapeSite: async function(index, url, exclusionPattern, pageIndexTextItems, int_min, int_max, successCallBack, errCallback) {
+	scrapeSite: async function(index, url, exclusionPattern, pageIndexTextItems, int_min, int_max, outputPath, successCallBack, errCallback) {
 		try {
 			let body = await request(url);
 			numRequest++;
@@ -14,22 +16,25 @@ module.exports = {
 			$('body').find('a').each(function(i, elem){
 				links.push($(elem).attr('href'));
 			});
+			let pageUUID = uuidv5(url, uuidv5.URL);
 			let textContentPara = textContentsParagraph($);
 			let textContentSmall = textContentsSpan($);
 			let textContentLinks = textContentsLinks($);
 			pageIndexTextItem =  {
 				blog_index:index,
 				page_index:url.trim(),
+				page_uuid:pageUUID,
 				text_paragraph:textContentPara,
 				text_small:textContentSmall,
 				text_links:textContentLinks
 			};
 			pageIndexTextItems.push(pageIndexTextItem);
+			takeWebShot(pageUUID,url, outputPath);
 			let filteredLinks = filterLinks(links, url, exclusionPattern);
 			if(filteredLinks!==undefined && filteredLinks!==null && filteredLinks.length>0) {
 				for(let i=0; i<filteredLinks.length; i++) {
 					let pageLink = filteredLinks[i];
-					await scrapePages(index, pageLink, exclusionPattern, pageIndexTextItems, int_min, int_max);
+					await scrapePages(index, pageLink, exclusionPattern, pageIndexTextItems, int_min, int_max, outputPath);
 				}
 				console.log('pageIndexTextItems ',pageIndexTextItems.length);
 			}
@@ -46,7 +51,7 @@ module.exports = {
 	}
 }
 
-async function scrapePages(index, pageLink, exclusionPattern, pageIndexTextItems, int_min, int_max) {
+async function scrapePages(index, pageLink, exclusionPattern, pageIndexTextItems, int_min, int_max, outputPath) {
 	let isEligible = isEligibleForScrape(pageLink, pageIndexTextItems);
 	if(isEligible === true) {
 		try {
@@ -65,22 +70,25 @@ async function scrapePages(index, pageLink, exclusionPattern, pageIndexTextItems
 				$('body').find('a').each(function(i, elem){
 					links.push($(elem).attr('href'));
 				});
+				let pageUUID = uuidv5(pageLink, uuidv5.URL);
 				let textContentPara = textContentsParagraph($);
 				let textContentSmall = textContentsSpan($);
 				let textContentLinks = textContentsLinks($);
 				pageIndexTextItem =  {
 					blog_index:index,
 					page_index:pageLink.trim(),
+					page_uuid:pageUUID,
 					text_paragraph:textContentPara,
 					text_small:textContentSmall,
 					text_links:textContentLinks
 				};
 				pageIndexTextItems.push(pageIndexTextItem);
+				takeWebShot(pageUUID,pageLink, outputPath);
 				let filteredLinks = filterLinks(links, pageLink, exclusionPattern);
 				if(filteredLinks!==undefined && filteredLinks!==null && filteredLinks.length>0) {
 					for(let i=0; i<filteredLinks.length; i++) {
 						let nestedPageLink = filteredLinks[i];
-						await scrapePages(index, nestedPageLink, exclusionPattern, pageIndexTextItems, int_min, int_max);
+						await scrapePages(index, nestedPageLink, exclusionPattern, pageIndexTextItems, int_min, int_max, outputPath);
 					}
 				}
 			}
@@ -90,6 +98,10 @@ async function scrapePages(index, pageLink, exclusionPattern, pageIndexTextItems
 		}
 	}
 
+}
+
+function takeWebShot(uuid, url, outputPath){
+	webshot(url, outputPath+uuid+'.png', function(err) {});
 }
 
 function isEligibleForScrape(pageLink, pageIndexTextItems) {
@@ -182,8 +194,8 @@ function isURL(str) {
 function sleep(ms) {
   let sleep = ms;
   let sl = (ms/1000);
-  if(sl>300) {
-  	sleep = 180000;
+  if(sl>40) {
+  	sleep = 40000;
   }
   console.log('Sleep time ', (sleep/1000));
   return new Promise(resolve => setTimeout(resolve, sleep));
