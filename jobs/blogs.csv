@@ -1,3 +1,0 @@
-blog_index,blog_url,exclusion_pattern,execute,interval_min,interval_max
-1,http://fashion.makeupandbeauty.com/,#comment|?replytocom|look-book|subscribe|author|about-us|outfits,N,30,120
-2,http://alongwithsky.blogspot.in/,about-me|contact-us|showComment|search/label|#comments,Y,30,120
