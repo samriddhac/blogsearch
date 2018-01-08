@@ -1,0 +1,19 @@
+{
+  "name": "web-scrapper",
+  "version": "1.0.0",
+  "description": "Web scrapping job",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "run-job": "node index.js"
+  },
+  "author": "Samriddha Chatterjee",
+  "license": "ISC",
+  "dependencies": {
+    "cheerio": "^1.0.0-rc.2",
+    "csv-parser": "^1.12.0",
+    "csv-write-stream": "^2.0.0",
+    "lodash": "^4.17.4",
+    "tinyreq": "^3.3.1"
+  }
+}
