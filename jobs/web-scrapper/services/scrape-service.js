@@ -79,8 +79,8 @@ async function scrapePages(index, pageLink, exclusionPattern, pageIndexTextItems
 				let filteredLinks = filterLinks(links, pageLink, exclusionPattern);
 				if(filteredLinks!==undefined && filteredLinks!==null && filteredLinks.length>0) {
 					for(let i=0; i<filteredLinks.length; i++) {
-						let pageLink = filteredLinks[i];
-						await scrapePages(index, pageLink, exclusionPattern, pageIndexTextItems, int_min, int_max);
+						let nestedPageLink = filteredLinks[i];
+						await scrapePages(index, nestedPageLink, exclusionPattern, pageIndexTextItems, int_min, int_max);
 					}
 				}
 			}
