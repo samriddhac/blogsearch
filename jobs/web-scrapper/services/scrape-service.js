@@ -100,7 +100,9 @@ async function scrapePages(index, url, pageLink, exclusionPattern, pageIndexText
 }
 
 function takeWebShot(uuid, url, outputPath){
-	webshot(url, outputPath+uuid+'.png', function(err) {});
+	webshot(url, outputPath+uuid+'.png', function(err) {
+		console.log('Webshot error ',err);
+	});
 }
 
 function isEligibleForScrape(pageLink, pageIndexTextItems) {
