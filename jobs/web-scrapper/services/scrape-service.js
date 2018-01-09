@@ -3,12 +3,14 @@ const request = require("tinyreq");
 const _ = require('lodash');
 const uuidv5 = require('uuid/v5');
 const webshot = require('webshot');
+const csvWriteService = require('./csv-write-service.js');
 
 var numRequest = 0;
 
 module.exports = {
 	scrapeSite: async function(index, url, exclusionPattern, pageIndexTextItems, int_min, int_max, outputPath, successCallBack, errCallback) {
 		try {
+			var visitedLinks = [];
 			let body = await request(url);
 			numRequest++;
 			let $ = cheerio.load(body);
@@ -20,6 +22,15 @@ module.exports = {
 			let textContentPara = textContentsParagraph($);
 			let textContentSmall = textContentsSpan($);
 			let textContentLinks = textContentsLinks($);
+			let headerItem =  {
+				blog_index:'blog_index',
+				page_index:'page_index',
+				page_uuid:'page_uuid',
+				text_paragraph:'text_paragraph',
+				text_small:'text_small',
+				text_links:'text_links'
+			};
+			pageIndexTextItems.push(headerItem);
 			pageIndexTextItem =  {
 				blog_index:index,
 				page_index:url.trim(),
@@ -29,14 +40,20 @@ module.exports = {
 				text_links:textContentLinks
 			};
 			pageIndexTextItems.push(pageIndexTextItem);
+			visitedLinks.push(url.trim());
 			takeWebShot(pageUUID,url, outputPath);
 			let filteredLinks = filterLinks(links, url, exclusionPattern);
 			if(filteredLinks!==undefined && filteredLinks!==null && filteredLinks.length>0) {
 				for(let i=0; i<filteredLinks.length; i++) {
 					let pageLink = filteredLinks[i];
-					await scrapePages(index, url, pageLink, exclusionPattern, pageIndexTextItems, int_min, int_max, outputPath);
+					await scrapePages(index, url, pageLink, exclusionPattern, pageIndexTextItems, visitedLinks, 
+						int_min, int_max, outputPath);
 				}
 			}
+			csvWriteService.writeCSVData(pageIndexTextItems, outputPath, index);
+			pageIndexTextItems = [];
+			console.log('Total visited links : ', visitedLinks.length);
+			visitedLinks = [];
 		}
 		catch(e) {
 			console.error('Execution failed with error ', e);
@@ -50,8 +67,8 @@ module.exports = {
 	}
 }
 
-async function scrapePages(index, url, pageLink, exclusionPattern, pageIndexTextItems, int_min, int_max, outputPath) {
-	let isEligible = isEligibleForScrape(pageLink, pageIndexTextItems);
+async function scrapePages(index, url, pageLink, exclusionPattern, pageIndexTextItems, visitedLinks, int_min, int_max, outputPath) {
+	let isEligible = isEligibleForScrape(pageLink, visitedLinks);
 	if(isEligible === true) {
 		try {
 			if(pageLink!==undefined && pageLink!==null && isURL(pageLink) === true) {
@@ -82,12 +99,19 @@ async function scrapePages(index, url, pageLink, exclusionPattern, pageIndexText
 					text_links:textContentLinks
 				};
 				pageIndexTextItems.push(pageIndexTextItem);
+				visitedLinks.push(pageLink.trim());
+				if(pageIndexTextItems.length > 99) {
+					csvWriteService.writeCSVData(pageIndexTextItems, outputPath, index);
+					pageIndexTextItems = [];
+					console.log('Reached 100 requests , Hence cleaning the memory.');
+				}
 				takeWebShot(pageUUID,pageLink, outputPath);
 				let filteredLinks = filterLinks(links, url, exclusionPattern);
 				if(filteredLinks!==undefined && filteredLinks!==null && filteredLinks.length>0) {
 					for(let i=0; i<filteredLinks.length; i++) {
 						let nestedPageLink = filteredLinks[i];
-						await scrapePages(index, url, nestedPageLink, exclusionPattern, pageIndexTextItems, int_min, int_max, outputPath);
+						await scrapePages(index, url, nestedPageLink, exclusionPattern, pageIndexTextItems, visitedLinks, 
+							int_min, int_max, outputPath);
 					}
 				}
 			}
@@ -107,10 +131,9 @@ function takeWebShot(uuid, url, outputPath){
 	});
 }
 
-function isEligibleForScrape(pageLink, pageIndexTextItems) {
+function isEligibleForScrape(pageLink, visitedLinks) {
 	let isEligible = true;
-	let item = _.find(pageIndexTextItems, {page_index:pageLink});
-	if(item!==undefined && item!==null) {
+	if(_.includes(visitedLinks, pageLink)) {
 		isEligible = false;
 	}
 	return isEligible;

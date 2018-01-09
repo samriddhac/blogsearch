@@ -1,4 +1,4 @@
-const csvService = require('./services/csv-parse-service.js');
+const jobService = require('./services/job-service.js');
 
 if(process.argv.length<4) {
 	console.error("Mandatory arguments CSV file path and Output path is missing.");
@@ -7,7 +7,7 @@ if(process.argv.length<4) {
 else {
 	let csvPath = process.argv[2];
 	let outputPath = process.argv[3];
-	csvService.parseCSV(csvPath, outputPath);
+	jobService.startJob(csvPath, outputPath);
 }
 process.on('unhandledRejection', up => { 
 	console.error("ERR: Promise rejected ",up);
