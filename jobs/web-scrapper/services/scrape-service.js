@@ -34,9 +34,8 @@ module.exports = {
 			if(filteredLinks!==undefined && filteredLinks!==null && filteredLinks.length>0) {
 				for(let i=0; i<filteredLinks.length; i++) {
 					let pageLink = filteredLinks[i];
-					await scrapePages(index, pageLink, exclusionPattern, pageIndexTextItems, int_min, int_max, outputPath);
+					await scrapePages(index, url, pageLink, exclusionPattern, pageIndexTextItems, int_min, int_max, outputPath);
 				}
-				console.log('pageIndexTextItems ',pageIndexTextItems.length);
 			}
 		}
 		catch(e) {
@@ -51,7 +50,7 @@ module.exports = {
 	}
 }
 
-async function scrapePages(index, pageLink, exclusionPattern, pageIndexTextItems, int_min, int_max, outputPath) {
+async function scrapePages(index, url, pageLink, exclusionPattern, pageIndexTextItems, int_min, int_max, outputPath) {
 	let isEligible = isEligibleForScrape(pageLink, pageIndexTextItems);
 	if(isEligible === true) {
 		try {
@@ -84,11 +83,11 @@ async function scrapePages(index, pageLink, exclusionPattern, pageIndexTextItems
 				};
 				pageIndexTextItems.push(pageIndexTextItem);
 				takeWebShot(pageUUID,pageLink, outputPath);
-				let filteredLinks = filterLinks(links, pageLink, exclusionPattern);
+				let filteredLinks = filterLinks(links, url, exclusionPattern);
 				if(filteredLinks!==undefined && filteredLinks!==null && filteredLinks.length>0) {
 					for(let i=0; i<filteredLinks.length; i++) {
 						let nestedPageLink = filteredLinks[i];
-						await scrapePages(index, nestedPageLink, exclusionPattern, pageIndexTextItems, int_min, int_max, outputPath);
+						await scrapePages(index, url, nestedPageLink, exclusionPattern, pageIndexTextItems, int_min, int_max, outputPath);
 					}
 				}
 			}
@@ -150,7 +149,9 @@ function filterLinks(inputLinks, domain, exclusionPattern) {
 	//Same page + Domain filter.
 	let exclusionList = exclusionPattern.split('|');
 	uniqueLinks.forEach((link)=>{
-		if(_.startsWith(link, domain)){
+
+		if(_.startsWith(link, domain) 
+			&& !(link.match(/\.(jpeg|jpg|gif|png|pdf|xls|xlsx|doc|svg|JPEG|JPG|GIF|PNG)$/) != null)){
 			outputLinks.push(link.trim());
 		}
 	});
