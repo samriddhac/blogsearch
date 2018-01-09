@@ -124,7 +124,7 @@ async function scrapePages(index, url, pageLink, exclusionPattern, pageIndexText
 }
 
 function takeWebShot(uuid, url, outputPath){
-	webshot(url, outputPath+uuid+'.png', function(err) {
+	webshot(url, outputPath+'images/'+uuid+'.png', function(err) {
 		if(err!==undefined && err!==null) {
 			console.log('Webshot error ',err);
 		}
