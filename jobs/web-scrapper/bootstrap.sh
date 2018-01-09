@@ -1,6 +1,7 @@
 #!/bin/bash
 sudo apt-get update -y
 sudo apt-get install libfontconfig -y
+sudo apt install awscli -y
 mkdir tmp
 cd tmp
 curl -sL https://deb.nodesource.com/setup_8.x -o nodesource_setup.sh
