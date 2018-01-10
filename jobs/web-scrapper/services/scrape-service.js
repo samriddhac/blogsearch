@@ -6,7 +6,7 @@ const webshot = require('webshot');
 const csvWriteService = require('./csv-write-service.js');
 
 var numRequest = 0;
-var MAX_RECURSIVE_DEPTH = 10;
+var MAX_RECURSIVE_DEPTH = 20;
 
 module.exports = {
 	scrapeSite: async function(index, url, exclusionPattern, pageIndexTextItems, int_min, int_max, outputPath, successCallBack, errCallback) {
@@ -51,11 +51,8 @@ module.exports = {
 			let filteredLinks = filterLinks(links, url, exclusionPattern);
 			queuedLinks.concat(filteredLinks);
 			if(filteredLinks!==undefined && filteredLinks!==null && filteredLinks.length>0) {
-				for(let i=0; i<filteredLinks.length; i++) {
-					let pageLink = filteredLinks[i];
-					await scrapePages(index, url, pageLink, exclusionPattern, pageIndexTextItems, visitedLinks, 
+				await scrapePages(index, url, filteredLinks, exclusionPattern, pageIndexTextItems, visitedLinks, 
 						int_min, int_max, outputPath, depth, queuedLinks, maxDepthLinks);
-				}
 			}
 			csvWriteService.writeCSVData(pageIndexTextItems, outputPath, index);
 			pageIndexTextItems = [];
@@ -79,67 +76,71 @@ module.exports = {
 	}
 }
 
-async function scrapePages(index, url, pageLink, exclusionPattern, pageIndexTextItems, visitedLinks, 
+async function scrapePages(index, url, filteredLinks, exclusionPattern, pageIndexTextItems, visitedLinks, 
 	int_min, int_max, outputPath, depth, queuedLinks, maxDepthLinks) {
+	let links = [];
 	let currentDepth = depth+1;
 	depth = currentDepth; 		
-	let isEligible = isEligibleForScrape(pageLink, visitedLinks);
-	if(isEligible === true && currentDepth<=MAX_RECURSIVE_DEPTH) {
-		try {
-			if(pageLink!==undefined && pageLink!==null && isURL(pageLink) === true) {
-				console.log('Scraping page ', pageLink, ' numRequest ',numRequest, ' depth ', depth);
-				if(numRequest%10 == 0 ) {
-					await sleep(getRandomInt(int_max,(Number(int_max)+20))*100);
-				}
-				else {
-					await sleep(getRandomInt(int_min,(Number(int_min)+10))*100);
-				}
-				let body = await request(pageLink);
-				numRequest++;
-				let $ = cheerio.load(body);
-				let links = [];
-				$('body').find('a').each(function(i, elem){
-					links.push($(elem).attr('href'));
-				});
-				let pageUUID = uuidv5(pageLink, uuidv5.URL);
-				let textContentPara = textContentsParagraph($);
-				let textContentSmall = textContentsSpan($);
-				let textContentLinks = textContentsLinks($);
-				pageIndexTextItem =  {
-					blog_index:index,
-					page_index:pageLink.trim(),
-					page_uuid:pageUUID,
-					text_paragraph:textContentPara,
-					text_small:textContentSmall,
-					text_links:textContentLinks
-				};
-				pageIndexTextItems.push(pageIndexTextItem);
-				visitedLinks.push(pageLink.trim());
-				if(pageIndexTextItems.length > 99) {
-					csvWriteService.writeCSVData(pageIndexTextItems, outputPath, index);
-					pageIndexTextItems = [];
-					console.log('Reached 100 requests , Hence cleaning the memory.');
-				}
-				takeWebShot(pageUUID,pageLink, outputPath);
-				let filteredLinks = filterLinks(links, url, exclusionPattern);
-				if(filteredLinks!==undefined && filteredLinks!==null && filteredLinks.length>0) {
-					for(let i=0; i<filteredLinks.length; i++) {
-						let nestedPageLink = filteredLinks[i];
-						await scrapePages(index, url, nestedPageLink, exclusionPattern, pageIndexTextItems, visitedLinks, 
-							int_min, int_max, outputPath, depth, queuedLinks, maxDepthLinks);
+	if(filteredLinks!==undefined && filteredLinks!==null && filteredLinks.length>0) {
+		for(let i=0; i<filteredLinks.length; i++) {
+			let pageLink = filteredLinks[i];
+			let isEligible = isEligibleForScrape(pageLink, visitedLinks);
+			if(isEligible === true && currentDepth<=MAX_RECURSIVE_DEPTH) {
+				try {
+					if(pageLink!==undefined && pageLink!==null && isURL(pageLink) === true) {
+						console.log('Scraping page ', pageLink, ' numRequest ',numRequest, ' depth ', depth);
+						if(numRequest%10 == 0 ) {
+							await sleep(getRandomInt(int_max,(Number(int_max)+20))*100);
+						}
+						else {
+							await sleep(getRandomInt(int_min,(Number(int_min)+10))*100);
+						}
+						let body = await request(pageLink);
+						numRequest++;
+						let $ = cheerio.load(body);
+						$('body').find('a').each(function(i, elem){
+							links.push($(elem).attr('href'));
+						});
+						let pageUUID = uuidv5(pageLink, uuidv5.URL);
+						let textContentPara = textContentsParagraph($);
+						let textContentSmall = textContentsSpan($);
+						let textContentLinks = textContentsLinks($);
+						pageIndexTextItem =  {
+							blog_index:index,
+							page_index:pageLink.trim(),
+							page_uuid:pageUUID,
+							text_paragraph:textContentPara,
+							text_small:textContentSmall,
+							text_links:textContentLinks
+						};
+						pageIndexTextItems.push(pageIndexTextItem);
+						visitedLinks.push(pageLink.trim());
+						if(pageIndexTextItems.length > 99) {
+							csvWriteService.writeCSVData(pageIndexTextItems, outputPath, index);
+							pageIndexTextItems = [];
+							console.log('Reached 100 requests , Hence cleaning the memory.');
+						}
+						takeWebShot(pageUUID,pageLink, outputPath);
 					}
+				}
+				catch(e) {
+					console.error('Execution failed with error ', e);
+				}
+			}
+			else {
+				if(isEligible === true && currentDepth>MAX_RECURSIVE_DEPTH) {
+					if(maxDepthLinks!==undefined && maxDepthLinks!==null) {
+						maxDepthLinks.push(pageLink);
+					}	
 				}
 			}
 		}
-		catch(e) {
-			console.error('Execution failed with error ', e);
-		}
-	}
-	else {
-		if(isEligible === true && currentDepth>MAX_RECURSIVE_DEPTH) {
-			if(maxDepthLinks!==undefined && maxDepthLinks!==null) {
-				maxDepthLinks.push(pageLink);
-			}	
+		if(links!==undefined && links!==null && links.length>0) {
+			let nestedFilteredLinks = filterLinks(links, url, exclusionPattern);
+			if(nestedFilteredLinks!==undefined && nestedFilteredLinks!==null && nestedFilteredLinks.length>0){
+				await scrapePages(index, url, nestedFilteredLinks, exclusionPattern, pageIndexTextItems, visitedLinks, 
+						int_min, int_max, outputPath, depth, queuedLinks, maxDepthLinks);
+			}
 		}
 	}
 }
