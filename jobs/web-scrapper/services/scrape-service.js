@@ -243,8 +243,8 @@ function isURL(str) {
 function sleep(ms) {
   let sleep = ms;
   let sl = (ms/1000);
-  if(sl>10) {
-  	sleep = 10000;
+  if(sl>40) {
+  	sleep = 35000;
   }
   console.log('Sleep time ', (sleep/1000));
   return new Promise(resolve => setTimeout(resolve, sleep));
