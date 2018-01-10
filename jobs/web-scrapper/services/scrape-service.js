@@ -11,6 +11,8 @@ module.exports = {
 	scrapeSite: async function(index, url, exclusionPattern, pageIndexTextItems, int_min, int_max, outputPath, successCallBack, errCallback) {
 		try {
 			var visitedLinks = [];
+			let depth = 1;
+			console.log('Scraping page ', url, ' numRequest ',numRequest, ' depth ', depth);
 			let body = await request(url);
 			numRequest++;
 			let $ = cheerio.load(body);
@@ -47,7 +49,7 @@ module.exports = {
 				for(let i=0; i<filteredLinks.length; i++) {
 					let pageLink = filteredLinks[i];
 					await scrapePages(index, url, pageLink, exclusionPattern, pageIndexTextItems, visitedLinks, 
-						int_min, int_max, outputPath);
+						int_min, int_max, outputPath, depth);
 				}
 			}
 			csvWriteService.writeCSVData(pageIndexTextItems, outputPath, index);
@@ -67,12 +69,14 @@ module.exports = {
 	}
 }
 
-async function scrapePages(index, url, pageLink, exclusionPattern, pageIndexTextItems, visitedLinks, int_min, int_max, outputPath) {
+async function scrapePages(index, url, pageLink, exclusionPattern, pageIndexTextItems, visitedLinks, 
+	int_min, int_max, outputPath, depth) {
+	depth++;				
 	let isEligible = isEligibleForScrape(pageLink, visitedLinks);
-	if(isEligible === true) {
+	if(isEligible === true && depth<=10) {
 		try {
 			if(pageLink!==undefined && pageLink!==null && isURL(pageLink) === true) {
-				console.log('Scraping page ', pageLink, ' numRequest ',numRequest);
+				console.log('Scraping page ', pageLink, ' numRequest ',numRequest, ' depth ', depth);
 				if(numRequest%10 == 0 ) {
 					await sleep(getRandomInt(int_max,(Number(int_max)+20))*100);
 				}

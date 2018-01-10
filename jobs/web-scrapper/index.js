@@ -11,5 +11,12 @@ else {
 }
 process.on('unhandledRejection', up => { 
 	console.error("ERR: Promise rejected ",up);
-})
- 
+});
+process.on('uncaughtException', function (err) {
+  console.error((new Date).toUTCString() + ' uncaughtException:', err.message)
+  console.error(err.stack)
+  process.exit(1);
+});
+process.on('exit', (code) => {
+  console.log(`About to exit with code: ${code}`);
+});
