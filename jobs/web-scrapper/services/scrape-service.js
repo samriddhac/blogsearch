@@ -6,11 +6,14 @@ const webshot = require('webshot');
 const csvWriteService = require('./csv-write-service.js');
 
 var numRequest = 0;
+var MAX_RECURSIVE_DEPTH = 10;
 
 module.exports = {
 	scrapeSite: async function(index, url, exclusionPattern, pageIndexTextItems, int_min, int_max, outputPath, successCallBack, errCallback) {
 		try {
 			var visitedLinks = [];
+			var maxDepthLinks = [];
+			let queuedLinks = [];
 			let depth = 1;
 			console.log('Scraping page ', url, ' numRequest ',numRequest, ' depth ', depth);
 			let body = await request(url);
@@ -43,19 +46,26 @@ module.exports = {
 			};
 			pageIndexTextItems.push(pageIndexTextItem);
 			visitedLinks.push(url.trim());
+			queuedLinks.push(url.trim());
 			takeWebShot(pageUUID,url, outputPath);
 			let filteredLinks = filterLinks(links, url, exclusionPattern);
+			queuedLinks.concat(filteredLinks);
 			if(filteredLinks!==undefined && filteredLinks!==null && filteredLinks.length>0) {
 				for(let i=0; i<filteredLinks.length; i++) {
 					let pageLink = filteredLinks[i];
 					await scrapePages(index, url, pageLink, exclusionPattern, pageIndexTextItems, visitedLinks, 
-						int_min, int_max, outputPath, depth);
+						int_min, int_max, outputPath, depth, queuedLinks, maxDepthLinks);
 				}
 			}
 			csvWriteService.writeCSVData(pageIndexTextItems, outputPath, index);
 			pageIndexTextItems = [];
 			console.log('Total visited links : ', visitedLinks.length);
+			console.log('Max depth links : ', maxDepthLinks.length);
+			let unvisitedLinks = _.difference(maxDepthLinks,visitedLinks);
+			console.log('Un-visited max depth links : ', unvisitedLinks);
 			visitedLinks = [];
+			maxDepthLinks = [];
+			unvisitedLinks = [];
 		}
 		catch(e) {
 			console.error('Execution failed with error ', e);
@@ -70,10 +80,11 @@ module.exports = {
 }
 
 async function scrapePages(index, url, pageLink, exclusionPattern, pageIndexTextItems, visitedLinks, 
-	int_min, int_max, outputPath, depth) {
-	depth++;				
+	int_min, int_max, outputPath, depth, queuedLinks, maxDepthLinks) {
+	let currentDepth = depth+1;
+	depth = currentDepth; 		
 	let isEligible = isEligibleForScrape(pageLink, visitedLinks);
-	if(isEligible === true && depth<=10) {
+	if(isEligible === true && currentDepth<=MAX_RECURSIVE_DEPTH) {
 		try {
 			if(pageLink!==undefined && pageLink!==null && isURL(pageLink) === true) {
 				console.log('Scraping page ', pageLink, ' numRequest ',numRequest, ' depth ', depth);
@@ -115,7 +126,7 @@ async function scrapePages(index, url, pageLink, exclusionPattern, pageIndexText
 					for(let i=0; i<filteredLinks.length; i++) {
 						let nestedPageLink = filteredLinks[i];
 						await scrapePages(index, url, nestedPageLink, exclusionPattern, pageIndexTextItems, visitedLinks, 
-							int_min, int_max, outputPath);
+							int_min, int_max, outputPath, depth, queuedLinks, maxDepthLinks);
 					}
 				}
 			}
@@ -124,7 +135,13 @@ async function scrapePages(index, url, pageLink, exclusionPattern, pageIndexText
 			console.error('Execution failed with error ', e);
 		}
 	}
-
+	else {
+		if(isEligible === true && currentDepth>MAX_RECURSIVE_DEPTH) {
+			if(maxDepthLinks!==undefined && maxDepthLinks!==null) {
+				maxDepthLinks.push(pageLink);
+			}	
+		}
+	}
 }
 
 function takeWebShot(uuid, url, outputPath){
@@ -226,8 +243,8 @@ function isURL(str) {
 function sleep(ms) {
   let sleep = ms;
   let sl = (ms/1000);
-  if(sl>40) {
-  	sleep = 40000;
+  if(sl>10) {
+  	sleep = 10000;
   }
   console.log('Sleep time ', (sleep/1000));
   return new Promise(resolve => setTimeout(resolve, sleep));
