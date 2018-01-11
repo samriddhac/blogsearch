@@ -1,5 +1,6 @@
 #!/bin/bash
 sudo apt-get update -y
+sudo apt-get install nfs-common -y
 sudo apt-get install libfontconfig -y
 sudo apt install awscli -y
 mkdir tmp
