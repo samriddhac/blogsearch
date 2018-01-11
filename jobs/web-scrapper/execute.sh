@@ -1,5 +1,6 @@
 #!/bin/bash
 cd /home/ubuntu/blogsearch/jobs/web-scrapper
+git reset --hard
 git pull
 npm install
 chmod 777 execute.sh
