@@ -165,7 +165,7 @@ function textContentsParagraph(Jquery){
 	let output = '';
 	let pText = Jquery('p').contents().text();
 	if(pText!==undefined && pText!==null) {
-		pText = pText.trim();
+		pText = pText.trim().replace(/[\r\n]+/g, '\n');
 	}
 	output = pText;
 	return output;
@@ -175,7 +175,7 @@ function textContentsSpan(Jquery){
 	let output = '';
 	let spanText = Jquery('span').contents().text();
 	if(spanText!==undefined && spanText!==null) {
-		spanText = spanText.trim();
+		spanText = spanText.trim().replace(/[\r\n]+/g, '\n');
 	}
 	output = spanText;
 	return output;
@@ -185,7 +185,7 @@ function textContentsLinks(Jquery){
 	let output = '';
 	let aText = Jquery('a').contents().text();
 	if(aText!==undefined && aText!==null) {
-		aText = aText.trim();
+		aText = aText.trim().replace(/[\r\n]+/g, '\n');
 	}
 	output = aText;
 	return output;
